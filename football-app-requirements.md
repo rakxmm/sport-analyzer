@@ -22,7 +22,7 @@ No. A server-side backend is required no matter which frontend framework is used
 | Auth | **Clerk** (`@clerk/clerk-react` on the frontend) |
 | Backend API | ASP.NET Core Minimal API — validates Clerk JWTs via JWT Bearer middleware + Clerk's JWKS endpoint |
 | Database | PostgreSQL, accessed via EF Core |
-| File upload | tus protocol — `tusdotnet` (server) + `tus-js-client` / Uppy (client) |
+| File upload | Resumable S3 multipart upload straight from the browser to R2 via presigned part URLs (replaces the original tus/`tusdotnet` plan — keeps 15 GB files off the API container; see README) |
 | Video processing | Dockerized worker running ffmpeg, triggered by a background job (Hangfire to start) |
 | Object storage | Cloudflare R2 (S3-compatible, zero egress) |
 | Compute hosting | Azure Container Apps (API + worker), using Azure for Students credit |

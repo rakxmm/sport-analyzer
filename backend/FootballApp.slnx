@@ -5,4 +5,7 @@
     <Project Path="src/FootballApp.Domain/FootballApp.Domain.csproj" />
     <Project Path="src/FootballApp.Infrastructure/FootballApp.Infrastructure.csproj" />
   </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FootballApp.Application.Tests/FootballApp.Application.Tests.csproj" />
+  </Folder>
 </Solution>

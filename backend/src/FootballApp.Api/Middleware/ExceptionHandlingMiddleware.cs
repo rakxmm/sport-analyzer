@@ -1,4 +1,5 @@
 using FootballApp.Application.Common.Exceptions;
+using Microsoft.EntityFrameworkCore;
 
 namespace FootballApp.Api.Middleware;
 
@@ -17,6 +18,10 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
         catch (ForbiddenAccessException ex)
         {
             await WriteProblem(context, StatusCodes.Status403Forbidden, ex.Message);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await WriteProblem(context, StatusCodes.Status409Conflict, "This match was changed by another request. Reload and try again.");
         }
         catch (InvalidOperationException ex)
         {

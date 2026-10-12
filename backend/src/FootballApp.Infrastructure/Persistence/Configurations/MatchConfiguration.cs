@@ -12,6 +12,15 @@ public class MatchConfiguration : IEntityTypeConfiguration<Match>
         builder.Property(m => m.Title).IsRequired().HasMaxLength(200);
         builder.HasIndex(m => m.OwnerId);
 
+        builder.Property(m => m.VideoStorageKey).HasMaxLength(256);
+        builder.Property(m => m.VideoFileName).HasMaxLength(255);
+        builder.Property(m => m.VideoContentType).HasMaxLength(100);
+        builder.Property(m => m.UploadId).HasMaxLength(1024);
+
+        // Postgres xmin as optimistic concurrency token: racing upload requests (two tabs, cancel during
+        // complete) fail with 409 instead of leaving the row half-updated.
+        builder.Property<uint>("Version").IsRowVersion();
+
         builder.HasMany(m => m.Tags)
             .WithOne(t => t.Match)
             .HasForeignKey(t => t.MatchId)

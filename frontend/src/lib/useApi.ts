@@ -1,10 +1,10 @@
 import { useAuth } from '@clerk/clerk-react'
 import { useCallback } from 'react'
-import type { Clip, Match, Tag } from './types'
+import type { Clip, Match, PartUploadUrl, Tag, UploadSession, VideoUrl } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
-class ApiError extends Error {
+export class ApiError extends Error {
   status: number
 
   constructor(status: number, message: string) {
@@ -51,6 +51,21 @@ export function useApi() {
         method: 'POST',
         body: JSON.stringify({ title, matchDate, consentConfirmed }),
       }),
+    getMatchVideoUrl: (matchId: string) => request<VideoUrl>(`/api/matches/${matchId}/video`),
+
+    startVideoUpload: (
+      matchId: string,
+      file: { fileName: string; contentType: string; sizeBytes: number; lastModifiedMs: number },
+    ) =>
+      request<UploadSession>(`/api/matches/${matchId}/upload`, {
+        method: 'POST',
+        body: JSON.stringify(file),
+      }),
+    getPartUploadUrl: (matchId: string, partNumber: number) =>
+      request<PartUploadUrl>(`/api/matches/${matchId}/upload/parts/${partNumber}`, { method: 'POST' }),
+    completeVideoUpload: (matchId: string) =>
+      request<Match>(`/api/matches/${matchId}/upload/complete`, { method: 'POST' }),
+    abortVideoUpload: (matchId: string) => request<Match>(`/api/matches/${matchId}/upload`, { method: 'DELETE' }),
 
     getTags: (matchId: string) => request<Tag[]>(`/api/matches/${matchId}/tags/`),
     createTag: (
