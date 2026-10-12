@@ -120,6 +120,12 @@ namespace FootballApp.Infrastructure.Persistence.Migrations
                     b.Property<long?>("UploadPartSizeBytes")
                         .HasColumnType("bigint");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.Property<string>("VideoContentType")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -127,6 +133,9 @@ namespace FootballApp.Infrastructure.Persistence.Migrations
                     b.Property<string>("VideoFileName")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");
+
+                    b.Property<long?>("VideoLastModifiedMs")
+                        .HasColumnType("bigint");
 
                     b.Property<long?>("VideoSizeBytes")
                         .HasColumnType("bigint");

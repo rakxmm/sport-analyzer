@@ -35,9 +35,14 @@ public class VideoUploadTests
         _db.SaveChanges();
     }
 
-    private Task<UploadSessionDto> Start(string fileName = "derby.mp4", long sizeBytes = 100 * MiB, string userId = OwnerId, string contentType = "video/mp4") =>
+    private Task<UploadSessionDto> Start(
+        string fileName = "derby.mp4",
+        long sizeBytes = 100 * MiB,
+        string userId = OwnerId,
+        string contentType = "video/mp4",
+        long lastModifiedMs = 1_760_000_000_000) =>
         new StartVideoUploadCommandHandler(_db, new FakeCurrentUser(userId), _storage)
-            .Handle(new StartVideoUploadCommand(_match.Id, fileName, contentType, sizeBytes), Ct);
+            .Handle(new StartVideoUploadCommand(_match.Id, fileName, contentType, sizeBytes, lastModifiedMs), Ct);
 
     private Task<Application.Matches.MatchDto> Complete() =>
         new CompleteVideoUploadCommandHandler(_db, new FakeCurrentUser(OwnerId), _storage)
@@ -123,6 +128,34 @@ public class VideoUploadTests
         Assert.Contains(oldUploadId, _storage.AbortedUploadIds);
         Assert.NotEqual(oldUploadId, _match.UploadId);
         Assert.Equal("other.mov", _match.VideoFileName);
+    }
+
+    [Fact]
+    public async Task Start_with_same_name_and_size_but_different_file_restarts()
+    {
+        await Start();
+        var oldUploadId = _match.UploadId!;
+        _storage.AddPart(oldUploadId, 1, 32 * MiB);
+
+        var session = await Start(lastModifiedMs: 1_770_000_000_000);
+
+        Assert.Contains(oldUploadId, _storage.AbortedUploadIds);
+        Assert.Empty(session.CompletedPartNumbers);
+    }
+
+    [Fact]
+    public async Task Start_reports_all_parts_done_when_the_upload_was_already_assembled()
+    {
+        var first = await Start();
+        UploadAllParts(first);
+        await _storage.CompleteMultipartUploadAsync(_match.VideoStorageKey!, _match.UploadId!,
+            (await _storage.ListUploadedPartsAsync(_match.VideoStorageKey!, _match.UploadId!, Ct))!, Ct);
+
+        var resumed = await Start();
+
+        Assert.Equal([1, 2, 3, 4], resumed.CompletedPartNumbers);
+        Assert.Empty(_storage.AbortedUploadIds);
+        Assert.Equal(VideoStatus.Uploaded, (await Complete()).VideoStatus);
     }
 
     [Fact]

@@ -48,10 +48,24 @@ namespace FootballApp.Infrastructure.Persistence.Migrations
                 nullable: true);
 
             migrationBuilder.AddColumn<long>(
+                name: "VideoLastModifiedMs",
+                table: "Matches",
+                type: "bigint",
+                nullable: true);
+
+            migrationBuilder.AddColumn<long>(
                 name: "VideoSizeBytes",
                 table: "Matches",
                 type: "bigint",
                 nullable: true);
+
+            migrationBuilder.AddColumn<uint>(
+                name: "xmin",
+                table: "Matches",
+                type: "xid",
+                rowVersion: true,
+                nullable: false,
+                defaultValue: 0u);
         }
 
         /// <inheritdoc />
@@ -74,7 +88,15 @@ namespace FootballApp.Infrastructure.Persistence.Migrations
                 table: "Matches");
 
             migrationBuilder.DropColumn(
+                name: "VideoLastModifiedMs",
+                table: "Matches");
+
+            migrationBuilder.DropColumn(
                 name: "VideoSizeBytes",
+                table: "Matches");
+
+            migrationBuilder.DropColumn(
+                name: "xmin",
                 table: "Matches");
 
             migrationBuilder.AlterColumn<string>(

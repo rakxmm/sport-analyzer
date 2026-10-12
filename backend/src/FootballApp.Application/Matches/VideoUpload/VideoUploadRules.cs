@@ -38,5 +38,6 @@ public static class VideoUploadRules
         match.VideoFileName = null;
         match.VideoContentType = null;
         match.VideoSizeBytes = null;
+        match.VideoLastModifiedMs = null;
     }
 }

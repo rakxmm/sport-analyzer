@@ -36,7 +36,7 @@ public static class MatchesEndpoints
 
         group.MapPost("/{id:guid}/upload", async (Guid id, StartVideoUploadRequest request, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(
-                new StartVideoUploadCommand(id, request.FileName, request.ContentType, request.SizeBytes), ct)));
+                new StartVideoUploadCommand(id, request.FileName, request.ContentType, request.SizeBytes, request.LastModifiedMs), ct)));
 
         group.MapPost("/{id:guid}/upload/parts/{partNumber:int}", async (Guid id, int partNumber, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetVideoPartUploadUrlQuery(id, partNumber), ct)));
@@ -50,5 +50,5 @@ public static class MatchesEndpoints
 
     public record CreateMatchRequest(string Title, DateOnly MatchDate, bool ConsentConfirmed);
 
-    public record StartVideoUploadRequest(string FileName, string ContentType, long SizeBytes);
+    public record StartVideoUploadRequest(string FileName, string ContentType, long SizeBytes, long LastModifiedMs);
 }

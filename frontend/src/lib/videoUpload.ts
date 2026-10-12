@@ -5,7 +5,7 @@ import { ApiError } from './useApi'
 export interface VideoUploadApi {
   startVideoUpload: (
     matchId: string,
-    file: { fileName: string; contentType: string; sizeBytes: number },
+    file: { fileName: string; contentType: string; sizeBytes: number; lastModifiedMs: number },
   ) => Promise<UploadSession>
   getPartUploadUrl: (matchId: string, partNumber: number) => Promise<PartUploadUrl>
   completeVideoUpload: (matchId: string) => Promise<Match>
@@ -15,21 +15,53 @@ interface UploadOptions {
   /** Aborting pauses the upload; calling uploadVideo again with the same file resumes it. */
   signal: AbortSignal
   onProgress: (uploadedBytes: number, totalBytes: number) => void
+  /** Called once every part is stored, right before R2 assembles the file. */
+  onCompleting: () => void
 }
 
 const CONCURRENT_PARTS = 4
 const RETRY_DELAYS_MS = [1_000, 2_000, 4_000, 8_000, 16_000, 30_000]
+// A connection can stall without ever erroring (e.g. Wi-Fi to LTE handover), so a part that makes no
+// progress for this long is aborted and retried.
+const STALL_TIMEOUT_MS = 60_000
+
+// Browsers leave file.type empty or non-video for some common camera formats (.mkv, .avi, .mts).
+const VIDEO_TYPES_BY_EXTENSION: Record<string, string> = {
+  mp4: 'video/mp4',
+  m4v: 'video/x-m4v',
+  mov: 'video/quicktime',
+  mkv: 'video/x-matroska',
+  webm: 'video/webm',
+  avi: 'video/x-msvideo',
+  mts: 'video/mp2t',
+  m2ts: 'video/mp2t',
+  ts: 'video/mp2t',
+  '3gp': 'video/3gpp',
+}
+
+/** The file's video content type, or null if it doesn't look like a video. */
+export function videoContentType(file: File): string | null {
+  if (file.type.startsWith('video/')) return file.type
+  const extension = file.name.split('.').pop()?.toLowerCase() ?? ''
+  return VIDEO_TYPES_BY_EXTENSION[extension] ?? null
+}
 
 /**
  * Uploads the raw match video straight to R2 as a multipart upload (FR-6, FR-7). The server reports
  * which parts R2 already holds, so a paused, dropped or reloaded upload continues where it stopped.
  */
 export async function uploadVideo(api: VideoUploadApi, matchId: string, file: File, options: UploadOptions): Promise<Match> {
+  const contentType = videoContentType(file)
+  if (!contentType) throw new Error('Please choose a video file.')
+
   const session = await api.startVideoUpload(matchId, {
     fileName: file.name,
-    contentType: file.type,
+    contentType,
     sizeBytes: file.size,
+    lastModifiedMs: file.lastModified,
   })
+  // Paused (or cancelled) while the session was being created.
+  options.signal.throwIfAborted()
 
   const partBounds = (partNumber: number) => {
     const start = (partNumber - 1) * session.partSizeBytes
@@ -103,6 +135,7 @@ export async function uploadVideo(api: VideoUploadApi, matchId: string, file: Fi
   }
 
   options.signal.throwIfAborted()
+  options.onCompleting()
   return api.completeVideoUpload(matchId)
 }
 
@@ -120,12 +153,27 @@ function putBlob(url: string, blob: Blob, signal: AbortSignal, onProgress: (load
     }
 
     const xhr = new XMLHttpRequest()
+    let stalled = false
+    let stallTimer = 0
+    const armStallTimer = () => {
+      clearTimeout(stallTimer)
+      stallTimer = window.setTimeout(() => {
+        stalled = true
+        xhr.abort()
+      }, STALL_TIMEOUT_MS)
+    }
     const onAbort = () => xhr.abort()
     signal.addEventListener('abort', onAbort)
-    const cleanup = () => signal.removeEventListener('abort', onAbort)
+    const cleanup = () => {
+      clearTimeout(stallTimer)
+      signal.removeEventListener('abort', onAbort)
+    }
 
     xhr.open('PUT', url)
-    xhr.upload.onprogress = (event) => onProgress(event.loaded)
+    xhr.upload.onprogress = (event) => {
+      armStallTimer()
+      onProgress(event.loaded)
+    }
     xhr.onload = () => {
       cleanup()
       if (xhr.status >= 200 && xhr.status < 300) resolve()
@@ -137,8 +185,10 @@ function putBlob(url: string, blob: Blob, signal: AbortSignal, onProgress: (load
     }
     xhr.onabort = () => {
       cleanup()
-      reject(signal.reason ?? new DOMException('Upload paused.', 'AbortError'))
+      if (stalled) reject(new Error('Upload stalled — retrying.'))
+      else reject(signal.reason ?? new DOMException('Upload paused.', 'AbortError'))
     }
+    armStallTimer()
     xhr.send(blob)
   })
 }

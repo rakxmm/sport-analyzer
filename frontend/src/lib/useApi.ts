@@ -53,7 +53,10 @@ export function useApi() {
       }),
     getMatchVideoUrl: (matchId: string) => request<VideoUrl>(`/api/matches/${matchId}/video`),
 
-    startVideoUpload: (matchId: string, file: { fileName: string; contentType: string; sizeBytes: number }) =>
+    startVideoUpload: (
+      matchId: string,
+      file: { fileName: string; contentType: string; sizeBytes: number; lastModifiedMs: number },
+    ) =>
       request<UploadSession>(`/api/matches/${matchId}/upload`, {
         method: 'POST',
         body: JSON.stringify(file),

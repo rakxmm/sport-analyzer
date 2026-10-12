@@ -20,6 +20,8 @@ public class Match : BaseEntity
     public string? VideoFileName { get; set; }
     public string? VideoContentType { get; set; }
     public long? VideoSizeBytes { get; set; }
+    /// <summary>Browser-reported File.lastModified (ms) — with name and size, identifies the same file on resume.</summary>
+    public long? VideoLastModifiedMs { get; set; }
 
     /// <summary>R2 multipart upload ID while the browser is still uploading parts (FR-6); null otherwise.</summary>
     public string? UploadId { get; set; }

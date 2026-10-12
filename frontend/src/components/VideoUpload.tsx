@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { formatBytes } from '../lib/format'
 import type { Match } from '../lib/types'
 import { ApiError, useApi } from '../lib/useApi'
-import { uploadVideo } from '../lib/videoUpload'
+import { uploadVideo, videoContentType } from '../lib/videoUpload'
 
 type UploadStatus = 'idle' | 'uploading' | 'paused' | 'completing' | 'error'
 
@@ -19,6 +19,7 @@ export function VideoUpload({ match, onMatchChange }: Props) {
   const [uploadedBytes, setUploadedBytes] = useState(0)
   const [error, setError] = useState<string | null>(null)
   const controllerRef = useRef<AbortController | null>(null)
+  const runningRef = useRef<Promise<void> | null>(null)
 
   const isBusy = status === 'uploading' || status === 'completing'
 
@@ -37,7 +38,7 @@ export function VideoUpload({ match, onMatchChange }: Props) {
     setError(null)
     setUploadedBytes(0)
     setStatus('idle')
-    if (selected && !selected.type.startsWith('video/')) {
+    if (selected && !videoContentType(selected)) {
       setFile(null)
       setError('Please choose a video file.')
       return
@@ -45,7 +46,11 @@ export function VideoUpload({ match, onMatchChange }: Props) {
     setFile(selected)
   }
 
-  async function startOrResume() {
+  function startOrResume() {
+    runningRef.current = runUpload()
+  }
+
+  async function runUpload() {
     if (!file) return
     const controller = new AbortController()
     controllerRef.current = controller
@@ -55,10 +60,8 @@ export function VideoUpload({ match, onMatchChange }: Props) {
     try {
       const updated = await uploadVideo(api, match.id, file, {
         signal: controller.signal,
-        onProgress: (uploaded, total) => {
-          setUploadedBytes(uploaded)
-          if (uploaded === total) setStatus('completing')
-        },
+        onProgress: setUploadedBytes,
+        onCompleting: () => setStatus('completing'),
       })
       setStatus('idle')
       setFile(null)
@@ -82,6 +85,8 @@ export function VideoUpload({ match, onMatchChange }: Props) {
   async function cancel() {
     if (!window.confirm('Cancel this upload? Parts uploaded so far will be discarded.')) return
     controllerRef.current?.abort()
+    // Let the paused upload settle first, so a start request still in flight can't recreate the upload after we cancel it.
+    await runningRef.current
     try {
       onMatchChange(await api.abortVideoUpload(match.id))
     } catch (err) {

@@ -12,7 +12,12 @@ namespace FootballApp.Application.Matches.Commands.StartVideoUpload;
 /// Starts uploading the raw match video straight to R2 as a multipart upload (FR-6). Calling it again
 /// with the same file resumes the unfinished upload — e.g. after a page reload — instead of starting over.
 /// </summary>
-public record StartVideoUploadCommand(Guid MatchId, string FileName, string ContentType, long SizeBytes) : IRequest<UploadSessionDto>;
+public record StartVideoUploadCommand(
+    Guid MatchId,
+    string FileName,
+    string ContentType,
+    long SizeBytes,
+    long LastModifiedMs) : IRequest<UploadSessionDto>;
 
 public class StartVideoUploadCommandHandler(
     IApplicationDbContext db,
@@ -61,14 +66,25 @@ public class StartVideoUploadCommandHandler(
 
         if (match.UploadId is not null)
         {
-            var isSameFile = match.VideoFileName == fileName && match.VideoSizeBytes == request.SizeBytes;
-            var existingParts = isSameFile
-                ? await storage.ListUploadedPartsAsync(match.VideoStorageKey!, match.UploadId, cancellationToken)
-                : null;
+            var isSameFile = match.VideoFileName == fileName
+                && match.VideoSizeBytes == request.SizeBytes
+                && match.VideoLastModifiedMs == request.LastModifiedMs;
 
-            if (existingParts is not null)
+            if (isSameFile)
             {
-                return ToSession(match, existingParts.Select(p => p.PartNumber));
+                var existingParts = await storage.ListUploadedPartsAsync(match.VideoStorageKey!, match.UploadId, cancellationToken);
+                if (existingParts is not null)
+                {
+                    return ToSession(match, existingParts.Select(p => p.PartNumber));
+                }
+
+                // R2 already assembled the file but our save didn't land — report every part as done so
+                // the client goes straight to Complete, which recognises the finished object.
+                if (await storage.GetObjectSizeAsync(match.VideoStorageKey!, cancellationToken) == request.SizeBytes)
+                {
+                    var partCount = VideoUploadRules.CalculatePartCount(request.SizeBytes, match.UploadPartSizeBytes!.Value);
+                    return ToSession(match, Enumerable.Range(1, partCount));
+                }
             }
 
             // A different file was picked, or R2 already discarded the unfinished upload (it expires
@@ -85,6 +101,7 @@ public class StartVideoUploadCommandHandler(
         match.VideoFileName = fileName;
         match.VideoContentType = contentType;
         match.VideoSizeBytes = request.SizeBytes;
+        match.VideoLastModifiedMs = request.LastModifiedMs;
 
         await db.SaveChangesAsync(cancellationToken);
 
