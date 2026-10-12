@@ -68,18 +68,20 @@ výnimka je verejná stránka `SharedClipPage` (bez prihlásenia, FR-16).
 ## Aktuálny stav
 
 Hotové: Clerk sign-in/up, JWT-chránené API, doménový model Match/Tag/Clip, endpointy s kontrolou
-vlastníctva, EF Core + `InitialCreate` migrácia, UI na zápasy a tagovanie, verejná stránka
-zdieľaného klipu.
+vlastníctva, EF Core migrácie, UI na zápasy a tagovanie, verejná stránka zdieľaného klipu.
+Nahrávanie videa (FR-6 až FR-8): prehliadač nahráva priamo do R2 cez S3 multipart s
+podpísanými URL pre jednotlivé časti (`lib/videoUpload.ts`, `Matches/Commands/*VideoUpload`,
+`R2VideoStorageService`). API bajty videa nikdy nedrží. **tus/`tusdotnet` sa nepoužíva** (dôvod
+je v README). Podpísaná URL na prehrávanie nahraného videa.
 
-Zatiaľ stuby (rozhrania hotové, implementácia chýba):
+Zatiaľ stuby / chýba:
 
-- `Infrastructure/Storage/R2VideoStorageService.cs` — Cloudflare R2 presigned URL (AWS S3 SDK).
-- tus resumable upload (FR-6, FR-7) — `tusdotnet` na serveri, `tus-js-client`/Uppy na klientovi.
 - `Infrastructure/Processing/ClipProcessingQueue.cs` — len loguje; cieľ je Hangfire + ffmpeg
-  worker v Docker kontajneri (FR-14).
-- Prehrávanie videa a hotkeys pri tagovaní (video.js, FR-10), úprava tagov (FR-12), stránky
-  Privacy Policy / Terms / takedown kontakt (FR-17, FR-19, FR-20), PWA manifest.
-- Testy zatiaľ neexistujú; nové patria do `backend/tests/`.
+  worker v Docker kontajneri (FR-14). Worker má aj zistiť dĺžku videa a posunúť ho z
+  `Uploaded` na `Ready`.
+- video.js a hotkeys pri tagovaní (FR-10; zatiaľ je tam obyčajný `<video>`), úprava tagov
+  (FR-12), stránky Privacy Policy / Terms / takedown kontakt (FR-17, FR-19, FR-20), PWA manifest.
+- Testy: `backend/tests/FootballApp.Application.Tests` (xUnit v3, EF InMemory, fake storage).
 
 ## Príkazy
 
@@ -89,6 +91,7 @@ docker compose up -d postgres
 
 # Backend (z backend/)
 dotnet build
+dotnet test
 dotnet run --project src/FootballApp.Api
 dotnet ef database update --project src/FootballApp.Infrastructure --startup-project src/FootballApp.Infrastructure
 dotnet ef migrations add <Name> --project src/FootballApp.Infrastructure --startup-project src/FootballApp.Infrastructure -o Persistence/Migrations
@@ -100,7 +103,7 @@ npm run build   # tsc + vite build
 npm run lint    # oxlint
 ```
 
-Konfigurácia: `Clerk:Authority` a `ConnectionStrings:Postgres` (backend, vyplnené len
-placeholdermi v `appsettings.Development.json`), `VITE_CLERK_PUBLISHABLE_KEY` a
+Konfigurácia: `Clerk:Authority`, `ConnectionStrings:Postgres` a `R2:*` (backend, vyplnené len
+placeholdermi v `appsettings.Development.json`; R2 kľúče cez user-secrets), `VITE_CLERK_PUBLISHABLE_KEY` a
 `VITE_API_BASE_URL` (frontend, vzor v `frontend/.env.example`). Pred odovzdaním práce over, že
-`dotnet build` aj `npm run build` prejdú bez chýb.
+`dotnet build`, `dotnet test` aj `npm run build` prejdú bez chýb.

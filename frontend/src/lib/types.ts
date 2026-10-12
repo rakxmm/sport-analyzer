@@ -9,7 +9,29 @@ export interface Match {
   matchDate: string
   videoStatus: VideoStatus
   durationSeconds: number | null
+  videoFileName: string | null
+  videoSizeBytes: number | null
+  uploadInProgress: boolean
   createdAt: string
+}
+
+export interface UploadSession {
+  matchId: string
+  fileName: string
+  sizeBytes: number
+  partSizeBytes: number
+  partCount: number
+  completedPartNumbers: number[]
+}
+
+export interface PartUploadUrl {
+  partNumber: number
+  url: string
+}
+
+export interface VideoUrl {
+  url: string
+  expiresAt: string
 }
 
 export interface Tag {

@@ -113,3 +113,32 @@ label.checkbox {
 .error {
   color: #d33;
 }
+
+.notice {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: #8882;
+}
+
+.upload-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.75rem 0;
+}
+
+.upload-progress progress {
+  width: 100%;
+}
+
+.button-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.match-video {
+  width: 100%;
+  border-radius: 6px;
+  background: #000;
+}

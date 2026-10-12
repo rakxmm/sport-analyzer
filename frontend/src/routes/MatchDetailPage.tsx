@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
+import { VideoUpload } from '../components/VideoUpload'
 import { useApi } from '../lib/useApi'
 import type { Clip, Match, Tag, TagType } from '../lib/types'
 
@@ -18,6 +19,10 @@ export function MatchDetailPage() {
   const [tagType, setTagType] = useState<TagType>('Goal')
   const [timestampSeconds, setTimestampSeconds] = useState(0)
 
+  const [videoUrl, setVideoUrl] = useState<string | null>(null)
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const hasVideo = match !== null && match.videoStatus !== 'PendingUpload'
+
   useEffect(() => {
     if (!matchId) return
     Promise.all([api.getMatch(matchId), api.getTags(matchId), api.getClips(matchId)])
@@ -29,6 +34,15 @@ export function MatchDetailPage() {
       .catch((err) => setError(err.message))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [matchId])
+
+  useEffect(() => {
+    if (!matchId || !hasVideo) return
+    api
+      .getMatchVideoUrl(matchId)
+      .then((video) => setVideoUrl(video.url))
+      .catch((err) => setError(err.message))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matchId, hasVideo])
 
   async function handleAddTag(event: React.FormEvent) {
     event.preventDefault()
@@ -83,12 +97,11 @@ export function MatchDetailPage() {
         {match.matchDate} — <span className={`status status--${match.videoStatus.toLowerCase()}`}>{match.videoStatus}</span>
       </p>
 
-      {match.videoStatus === 'PendingUpload' && (
+      {match.videoStatus === 'PendingUpload' && <VideoUpload match={match} onMatchChange={setMatch} />}
+
+      {hasVideo && videoUrl && (
         <div className="card">
-          <p>
-            Video upload isn't wired up yet in this scaffold — <code>IVideoStorageService</code> and
-            the tus endpoint still need a real Cloudflare R2 implementation (see FR-6/FR-8).
-          </p>
+          <video ref={videoRef} className="match-video" controls preload="metadata" src={videoUrl} />
         </div>
       )}
 
@@ -111,6 +124,14 @@ export function MatchDetailPage() {
             onChange={(e) => setTimestampSeconds(Number(e.target.value))}
           />
           <span>seconds</span>
+          {videoUrl && (
+            <button
+              type="button"
+              onClick={() => setTimestampSeconds(Math.floor(videoRef.current?.currentTime ?? 0))}
+            >
+              Use video time
+            </button>
+          )}
           <button type="submit">Add tag</button>
         </form>
       </div>
