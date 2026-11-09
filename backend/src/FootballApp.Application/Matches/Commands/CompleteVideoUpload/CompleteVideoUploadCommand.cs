@@ -9,15 +9,17 @@ using Microsoft.EntityFrameworkCore;
 namespace FootballApp.Application.Matches.Commands.CompleteVideoUpload;
 
 /// <summary>
-/// Assembles the uploaded parts into the final raw video in R2 (FR-8). The part list comes from R2
-/// itself rather than the client, and is checked against the size declared when the upload started.
+/// Assembles the uploaded parts into the final raw video in R2 and queues it for processing (FR-8). The
+/// part list comes from R2 itself rather than the client, and is checked against the size declared when
+/// the upload started.
 /// </summary>
 public record CompleteVideoUploadCommand(Guid MatchId) : IRequest<MatchDto>;
 
 public class CompleteVideoUploadCommandHandler(
     IApplicationDbContext db,
     ICurrentUserService currentUser,
-    IVideoStorageService storage) : IRequestHandler<CompleteVideoUploadCommand, MatchDto>
+    IVideoStorageService storage,
+    IVideoProcessingQueue processingQueue) : IRequestHandler<CompleteVideoUploadCommand, MatchDto>
 {
     public async Task<MatchDto> Handle(CompleteVideoUploadCommand request, CancellationToken cancellationToken)
     {
@@ -78,6 +80,11 @@ public class CompleteVideoUploadCommandHandler(
 
     private async Task<MatchDto> MarkUploaded(Match match, CancellationToken cancellationToken)
     {
+        // Queued before the status is saved: if the save fails, the client's retry lands here again and
+        // queues another (harmless) job, whereas a saved Uploaded status whose job was never queued
+        // would leave the match waiting forever.
+        await processingQueue.EnqueueAsync(match.Id, cancellationToken);
+
         match.UploadId = null;
         match.UploadPartSizeBytes = null;
         match.VideoStatus = VideoStatus.Uploaded;

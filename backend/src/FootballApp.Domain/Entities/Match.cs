@@ -15,7 +15,10 @@ public class Match : BaseEntity
 
     /// <summary>Object key of the raw video in R2 — assigned when an upload starts, final once VideoStatus leaves PendingUpload.</summary>
     public string? VideoStorageKey { get; set; }
+    /// <summary>Whole seconds, read from the file by the worker when the video becomes Ready.</summary>
     public int? DurationSeconds { get; set; }
+    /// <summary>Why the video ended up Failed, in words the owner can be shown.</summary>
+    public string? VideoFailureReason { get; set; }
 
     public string? VideoFileName { get; set; }
     public string? VideoContentType { get; set; }

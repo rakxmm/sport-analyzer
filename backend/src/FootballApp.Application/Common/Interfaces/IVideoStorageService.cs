@@ -27,4 +27,10 @@ public interface IVideoStorageService
 
     /// <summary>Signed, expiring GET URL for a raw video or rendered clip/reel.</summary>
     Task<string> GetSignedDownloadUrlAsync(string objectKey, TimeSpan expiresIn, CancellationToken cancellationToken);
+
+    /// <summary>Like <see cref="GetSignedDownloadUrlAsync"/>, but the browser saves the file under the given name instead of playing it.</summary>
+    Task<string> GetSignedAttachmentUrlAsync(string objectKey, string fileName, TimeSpan expiresIn, CancellationToken cancellationToken);
+
+    /// <summary>Stores a local file (a clip rendered by the worker), replacing any object already under that key.</summary>
+    Task UploadFileAsync(string objectKey, string filePath, string contentType, CancellationToken cancellationToken);
 }

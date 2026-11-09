@@ -19,6 +19,7 @@ public class VideoUploadTests
 
     private readonly TestDbContext _db = TestDbContext.Create();
     private readonly FakeVideoStorage _storage = new();
+    private readonly FakeProcessingQueue _queue = new();
     private readonly Match _match;
 
     public VideoUploadTests()
@@ -45,7 +46,7 @@ public class VideoUploadTests
             .Handle(new StartVideoUploadCommand(_match.Id, fileName, contentType, sizeBytes, lastModifiedMs), Ct);
 
     private Task<Application.Matches.MatchDto> Complete() =>
-        new CompleteVideoUploadCommandHandler(_db, new FakeCurrentUser(OwnerId), _storage)
+        new CompleteVideoUploadCommandHandler(_db, new FakeCurrentUser(OwnerId), _storage, _queue)
             .Handle(new CompleteVideoUploadCommand(_match.Id), Ct);
 
     private void UploadAllParts(UploadSessionDto session)
@@ -216,6 +217,33 @@ public class VideoUploadTests
     }
 
     [Fact]
+    public async Task Complete_queues_the_video_for_processing()
+    {
+        UploadAllParts(await Start());
+
+        await Complete();
+
+        Assert.Equal([_match.Id], _queue.MatchIds);
+    }
+
+    [Fact]
+    public async Task Complete_can_be_retried_when_the_video_could_not_be_queued()
+    {
+        UploadAllParts(await Start());
+        _queue.Fail = true;
+
+        await Assert.ThrowsAsync<IOException>(Complete);
+        Assert.Equal(VideoStatus.PendingUpload, _match.VideoStatus);
+        Assert.NotNull(_match.UploadId);
+
+        _queue.Fail = false;
+        var result = await Complete();
+
+        Assert.Equal(VideoStatus.Uploaded, result.VideoStatus);
+        Assert.Equal([_match.Id], _queue.MatchIds);
+    }
+
+    [Fact]
     public async Task Complete_rejects_missing_parts()
     {
         await Start();
@@ -223,6 +251,7 @@ public class VideoUploadTests
 
         await Assert.ThrowsAsync<InvalidOperationException>(Complete);
         Assert.Equal(VideoStatus.PendingUpload, _match.VideoStatus);
+        Assert.Empty(_queue.MatchIds);
     }
 
     [Fact]

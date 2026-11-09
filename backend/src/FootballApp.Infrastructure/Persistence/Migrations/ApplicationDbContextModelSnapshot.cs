@@ -130,6 +130,10 @@ namespace FootballApp.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("VideoFailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<string>("VideoFileName")
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)");

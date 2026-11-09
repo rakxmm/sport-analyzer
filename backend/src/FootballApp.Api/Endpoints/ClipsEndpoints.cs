@@ -1,4 +1,5 @@
 using FootballApp.Application.Clips.Commands.CreateClip;
+using FootballApp.Application.Clips.Queries.GetClipDownloadUrl;
 using FootballApp.Application.Clips.Queries.GetClipsForMatch;
 using FootballApp.Application.Clips.Queries.GetSharedClip;
 using FootballApp.Domain.Enums;
@@ -22,6 +23,11 @@ public static class ClipsEndpoints
             var result = await sender.Send(new CreateClipCommand(matchId, request.Type, request.TagIds), ct);
             return Results.Created($"/api/matches/{matchId}/clips/{result.Id}", result);
         });
+
+        app.MapGet("/api/clips/{clipId:guid}/download", async (Guid clipId, ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetClipDownloadUrlQuery(clipId), ct)))
+            .RequireAuthorization()
+            .WithTags("Clips");
 
         // Public — viewable without logging in (FR-16). Deliberately outside the authorized group.
         app.MapGet("/api/shared-clips/{shareToken}", async (string shareToken, ISender sender, CancellationToken ct) =>

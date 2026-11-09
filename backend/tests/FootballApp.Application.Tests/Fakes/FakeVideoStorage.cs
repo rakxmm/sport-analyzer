@@ -43,6 +43,29 @@ public class FakeVideoStorage : IVideoStorageService
     public Task<long?> GetObjectSizeAsync(string objectKey, CancellationToken cancellationToken) =>
         Task.FromResult<long?>(Objects.TryGetValue(objectKey, out var size) ? size : null);
 
-    public Task<string> GetSignedDownloadUrlAsync(string objectKey, TimeSpan expiresIn, CancellationToken cancellationToken) =>
-        Task.FromResult($"https://r2.test/{objectKey}?signed");
+    public Task<string> GetSignedDownloadUrlAsync(string objectKey, TimeSpan expiresIn, CancellationToken cancellationToken)
+    {
+        SignedUrlLifetimes.Add(expiresIn);
+        return Task.FromResult($"https://r2.test/{objectKey}?signed");
+    }
+
+    public Task<string> GetSignedAttachmentUrlAsync(string objectKey, string fileName, TimeSpan expiresIn, CancellationToken cancellationToken) =>
+        Task.FromResult($"https://r2.test/{objectKey}?signed&download={fileName}");
+
+    public Task UploadFileAsync(string objectKey, string filePath, string contentType, CancellationToken cancellationToken)
+    {
+        if (FailNextUpload)
+        {
+            FailNextUpload = false;
+            throw new IOException("Storage is unreachable.");
+        }
+
+        Objects[objectKey] = new FileInfo(filePath).Length;
+        UploadCount++;
+        return Task.CompletedTask;
+    }
+
+    public List<TimeSpan> SignedUrlLifetimes { get; } = new();
+    public int UploadCount { get; private set; }
+    public bool FailNextUpload { get; set; }
 }

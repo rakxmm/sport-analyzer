@@ -116,6 +116,26 @@ public class R2VideoStorageService(IAmazonS3 s3, IOptions<R2Options> options) : 
         return s3.GetPreSignedURLAsync(CreatePresignRequest(objectKey, HttpVerb.GET, expiresIn, _ => { }));
     }
 
+    public Task<string> GetSignedAttachmentUrlAsync(string objectKey, string fileName, TimeSpan expiresIn, CancellationToken cancellationToken)
+    {
+        return s3.GetPreSignedURLAsync(CreatePresignRequest(objectKey, HttpVerb.GET, expiresIn, request =>
+            request.ResponseHeaderOverrides.ContentDisposition = $"attachment; filename=\"{fileName.Replace("\"", string.Empty)}\""));
+    }
+
+    public async Task UploadFileAsync(string objectKey, string filePath, string contentType, CancellationToken cancellationToken)
+    {
+        await s3.PutObjectAsync(new PutObjectRequest
+        {
+            BucketName = Bucket,
+            Key = objectKey,
+            FilePath = filePath,
+            ContentType = contentType,
+            // R2 does not accept the SDK's default chunked (streaming SigV4) uploads. Without chunking
+            // the SDK hashes the file first and sends it with a normal signature.
+            UseChunkEncoding = false
+        }, cancellationToken);
+    }
+
     private GetPreSignedUrlRequest CreatePresignRequest(string objectKey, HttpVerb verb, TimeSpan expiresIn, Action<GetPreSignedUrlRequest> configure)
     {
         var request = new GetPreSignedUrlRequest
