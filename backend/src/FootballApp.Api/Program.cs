@@ -8,6 +8,10 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 
+// The frontend exchanges enums by name ("PendingUpload", "Goal"), not by number.
+builder.Services.ConfigureHttpJsonOptions(options =>
+    options.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter()));
+
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 

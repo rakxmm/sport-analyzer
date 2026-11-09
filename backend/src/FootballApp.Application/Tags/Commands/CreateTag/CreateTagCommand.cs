@@ -1,3 +1,4 @@
+using FootballApp.Application.Clips;
 using FootballApp.Application.Common.Exceptions;
 using FootballApp.Application.Common.Interfaces;
 using FootballApp.Domain.Entities;
@@ -29,6 +30,18 @@ public class CreateTagCommandHandler(
         if (match.OwnerId != currentUser.UserId)
         {
             throw new ForbiddenAccessException();
+        }
+
+        if (request.TimestampSeconds < 0
+            || (match.DurationSeconds is { } duration && !ClipRules.IsWithinVideo(request.TimestampSeconds, duration)))
+        {
+            throw new InvalidOperationException("The tag must be placed within the video.");
+        }
+
+        if (request.LeadInSeconds is < 0 or > ClipRules.MaxLeadSeconds
+            || request.LeadOutSeconds is < 0 or > ClipRules.MaxLeadSeconds)
+        {
+            throw new InvalidOperationException($"Lead-in and lead-out must be between 0 and {ClipRules.MaxLeadSeconds} seconds.");
         }
 
         var tag = new Tag

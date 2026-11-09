@@ -113,3 +113,72 @@ label.checkbox {
 .error {
   color: #d33;
 }
+
+.notice {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  background: #8882;
+}
+
+.upload-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.75rem 0;
+}
+
+.upload-progress progress {
+  width: 100%;
+}
+
+.button-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.match-video {
+  width: 100%;
+  border-radius: 6px;
+  background: #000;
+}
+
+.clip-list li.clip {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #3333;
+  border-radius: 6px;
+}
+
+.clip__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.clip__meta {
+  margin: 0;
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.clip__share {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.clip__share input {
+  flex: 1;
+  min-width: 0;
+}
+
+.clip .button-row {
+  align-items: center;
+  margin-top: 0;
+}
+
+.clip .error {
+  margin: 0;
+}

@@ -9,7 +9,30 @@ export interface Match {
   matchDate: string
   videoStatus: VideoStatus
   durationSeconds: number | null
+  videoFileName: string | null
+  videoSizeBytes: number | null
+  uploadInProgress: boolean
+  videoFailureReason: string | null
   createdAt: string
+}
+
+export interface UploadSession {
+  matchId: string
+  fileName: string
+  sizeBytes: number
+  partSizeBytes: number
+  partCount: number
+  completedPartNumbers: number[]
+}
+
+export interface PartUploadUrl {
+  partNumber: number
+  url: string
+}
+
+export interface VideoUrl {
+  url: string
+  expiresAt: string
 }
 
 export interface Tag {
@@ -29,4 +52,12 @@ export interface Clip {
   status: ClipStatus
   shareToken: string
   shareExpiresAt: string | null
+  failureReason: string | null
+  createdAt: string
+}
+
+export interface ClipDownloadUrl {
+  url: string
+  fileName: string
+  expiresAt: string
 }

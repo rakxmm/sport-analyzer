@@ -9,7 +9,9 @@ public record ClipDto(
     ClipType Type,
     ClipStatus Status,
     string ShareToken,
-    DateTimeOffset? ShareExpiresAt)
+    DateTimeOffset? ShareExpiresAt,
+    string? FailureReason,
+    DateTimeOffset CreatedAt)
 {
     public static ClipDto FromEntity(Clip clip) => new(
         clip.Id,
@@ -17,5 +19,7 @@ public record ClipDto(
         clip.Type,
         clip.Status,
         clip.ShareToken,
-        clip.ShareExpiresAt);
+        clip.ShareExpiresAt,
+        clip.FailureReason,
+        clip.CreatedAt);
 }

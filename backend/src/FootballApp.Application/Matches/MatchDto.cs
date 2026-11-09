@@ -9,6 +9,10 @@ public record MatchDto(
     DateOnly MatchDate,
     VideoStatus VideoStatus,
     int? DurationSeconds,
+    string? VideoFileName,
+    long? VideoSizeBytes,
+    bool UploadInProgress,
+    string? VideoFailureReason,
     DateTimeOffset CreatedAt)
 {
     public static MatchDto FromEntity(Match match) => new(
@@ -17,5 +21,9 @@ public record MatchDto(
         match.MatchDate,
         match.VideoStatus,
         match.DurationSeconds,
+        match.VideoFileName,
+        match.VideoSizeBytes,
+        match.UploadId != null,
+        match.VideoFailureReason,
         match.CreatedAt);
 }
