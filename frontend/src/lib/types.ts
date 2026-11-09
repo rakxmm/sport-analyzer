@@ -12,6 +12,7 @@ export interface Match {
   videoFileName: string | null
   videoSizeBytes: number | null
   uploadInProgress: boolean
+  videoFailureReason: string | null
   createdAt: string
 }
 
@@ -51,4 +52,12 @@ export interface Clip {
   status: ClipStatus
   shareToken: string
   shareExpiresAt: string | null
+  failureReason: string | null
+  createdAt: string
+}
+
+export interface ClipDownloadUrl {
+  url: string
+  fileName: string
+  expiresAt: string
 }

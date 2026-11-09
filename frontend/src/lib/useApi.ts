@@ -1,6 +1,6 @@
 import { useAuth } from '@clerk/clerk-react'
 import { useCallback } from 'react'
-import type { Clip, Match, PartUploadUrl, Tag, UploadSession, VideoUrl } from './types'
+import type { Clip, ClipDownloadUrl, Match, PartUploadUrl, Tag, UploadSession, VideoUrl } from './types'
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 
@@ -84,5 +84,6 @@ export function useApi() {
         method: 'POST',
         body: JSON.stringify({ type, tagIds }),
       }),
+    getClipDownloadUrl: (clipId: string) => request<ClipDownloadUrl>(`/api/clips/${clipId}/download`),
   }
 }
